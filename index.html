@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+  body {
+    background-color: #fff;
+    color: #111;
+    margin: 0px;
+    overflow: hidden;
+    font-family: Monospace;
+    font-size: 18px;
+    position: absolute;
+  }
+
+  #info {
+    position: absolute;
+    top: 3%;
+    width: 100%;
+    padding: 5px;
+    text-align: center;
+    color: #ffff00;
+  }
+</style>
+</head>
+
+<body>
+  <div id="info">mass spring damper<br>
+left click to change block's position</div>
+<script src="https://threejs.org/build/three.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js">
+</script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js">
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js">
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min.js"></script>
+
+
+<script>
+javascript: (function() {
+  var script = document.createElement('script');
+  script.onload = function() {
+    var stats = new Stats();
+    document.body.appendChild(stats.dom);
+    requestAnimationFrame(function loop() {
+      stats.update();
+      requestAnimationFrame(loop)
+    });
+  };
+  script.src = 'https://mrdoob.github.io/stats.js/build/stats.min.js';
+  document.head.appendChild(script);
+})();
+/*
+class PIDController {
+  constructor(theta = 0, thetaRef = 0) {
+    this.theta = theta;
+    this.thetaRef = thetaRef;
+    this.v = 0;
+    this.KP = 150; // 'spring constant'
+    this.KD = 20; // 'damping'
+    this.KI = 20;
+    this.integral = 0;
+  }
+
+  normalize(theta) {
+
+    do {
+      theta += Math.PI * 2;
+    } while (theta <= 0)
+
+    theta %= Math.PI * 2;
+    return theta;
+  }
+
+  update(dt) {
+    let error = this.thetaRef - this.theta;
+    console.log(this.thetaRef, this.theta)
+    this.integral += error * dt;
+    let u = this.KP * error + this.KI * this.integral - this.KD * this.v;
+    this.v += u * dt;
+    this.theta += this.v * dt;
+    // singularity: x = 0
+    this.theta = this.normalize(this.theta);
+    //console.log(this.KP, this.KI, this.KD);
+    return this.theta - Math.PI / 2;
+  }
+  setRef(ref) {
+    this.thetaRef = ref;
+  }
+}
+*/
+var renderer, camera, controls, scene;
+var wall, Block, points = [],  blockVec3 = new THREE.Vector3(20, -1, 0), redLine, geometry2;
+var mouse = new THREE.Vector2();
+var text = new function() {
+  this.stiffness = -20;
+  this.damping = -0.5;
+  this.mass = 0.5;
+}
+
+/* Spring stiffness(彈簧係數), in kg / s^2 */
+var k = -20;
+var spring_length = 20;
+
+/* Damping constant(阻尼係數) in kg / s */
+var b = -2.5;
+
+var block = {
+  x: 20,
+  v: 0,
+  mass: 0.5
+};
+
+init();
+animate();
+
+function init() {
+  renderer = new THREE.WebGLRenderer({
+    antialias: true
+  });
+  // STATS
+  stats = new Stats();
+  stats.domElement.style.position = 'absolute';
+  stats.domElement.style.top = '0px';
+  stats.domElement.style.zIndex = 100;
+  document.body.appendChild(stats.domElement);
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x888888);
+  document.body.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  camera = new THREE.OrthographicCamera(-50, 50, 50, -50, -10, 100);
+  camera.position.z = 10;
+
+  window.addEventListener('resize', onWindowResize, false);
+  window.addEventListener('mousedown', onDocumentMouseDown, false);
+  //----------------------------------------------------------
+  var stiffness, damping, mass;
+  var gui = new dat.GUI({
+    load: loadJSON()
+  });
+  gui.remember(text);
+  stiffness = gui.add(text, 'stiffness', 0.0, 100.0);
+  damping = gui.add(text, 'damping', 0.1, 10.0);
+  mass = gui.add(text, 'mass', 0.1, 5.0);
+
+  //##################### set gui
+  stiffness.onChange(function(value) {
+		k = -1 * parseInt(value);
+  });
+  damping.onChange(function(value) {
+		b = -1 * parseFloat(value);
+  });
+  mass.onChange(function(value) {
+		block.mass = parseFloat(value);
+  });
+
+  //----------------------------------------------------------
+  var geometry = new THREE.Geometry();
+  geometry.vertices.push(
+    new THREE.Vector3(-40, -40, 0),
+    new THREE.Vector3(40, -40, 0),
+    new THREE.Vector3(40, 40, 0),
+    new THREE.Vector3(-40, 40, 0),
+    new THREE.Vector3(-40, -40, 0));
+
+  var border = new THREE.Line(geometry, new THREE.LineBasicMaterial({
+    color: 0x0000ff
+  }));
+  scene.add(border);
+
+  var background = new THREE.Mesh(new THREE.PlaneGeometry(78, 78), new THREE.MeshBasicMaterial({
+    color: 0x888800,
+    polygonOffset: true,
+    polygonOffsetUnits: 3,
+    polygonOffsetFactor: 0
+  }));
+  scene.add(background);
+  //background.position.z = -1;
+  //----------------------------------------------------------
+
+  var wallGeo = new THREE.BoxGeometry(5, 10, 40);
+  var wallMat = new THREE.MeshBasicMaterial({
+    color: 0xaaaaaa
+  });
+  wall = new THREE.Mesh(wallGeo, wallMat);
+  scene.add(wall);
+  wall.position.set(-37.5, 0, 0);
+
+  var BlockGeo = new THREE.BoxGeometry(5, 5, 5);
+  var BlockMat = new THREE.MeshBasicMaterial({
+    color: 0x000000
+  });
+  Block = new THREE.Mesh(BlockGeo, BlockMat);
+  scene.add(Block);
+  Block.position.set(20, 0, 0);
+
+  geometry2 = new THREE.Geometry();
+  geometry2.vertices.push(new THREE.Vector3(-40, -1, 0), blockVec3)
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function onDocumentMouseDown(event) {
+  event.preventDefault();
+  // NDC: [-1,1]x[-1,1]
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  //console.log(mouse.x + ', ' + mouse.y);
+
+  if (event.button === 0) { // left button
+  	if(mouse.x < 0.4)
+    	block.x = mouse.x * 50;
+  }
+}
+
+function loadJSON() {
+  return {
+    "preset": "good_parameter1",
+    "remembered": {
+      "Default": {
+        "0": {
+          "stiffness": 20,
+          "damping": 2.5,
+          "mass": 0.5
+        }
+      },
+    "closed": false,
+    "folders": {}
+  	}
+	}
+}
+
+function animate() {
+  stats.update();
+
+  var F_spring = k * ((block.x - wall.position.x) - spring_length);
+  var F_damper = b * block.v;
+
+  var a = (F_spring + F_damper) / block.mass;
+  block.v += a * 1 / 60;
+  block.x += block.v * 1 / 60;
+
+  Block.position.x = block.x;
+  blockVec3.x = block.x;
+
+  redLine = new THREE.Line(geometry2,new THREE.LineBasicMaterial( { color: 0xff0000 } ))
+  //scene.add(redLine)
+
+  render();
+  requestAnimationFrame(animate);
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+
+</html>
