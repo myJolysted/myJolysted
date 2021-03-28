@@ -1,0 +1,86 @@
+
+<style type="text/css">
+#Header{
+  width:100%;
+  height:5%;
+  text-align:center;
+  line-height:50px;
+  font-size:15px;
+  color:#fffaf3;
+  font-weight:bold;
+  background-color:#435058;
+}
+#Sidebar{
+  width:15%;
+  float:left;
+  height:84%;
+  text-align:center;
+  line-height:280px;
+  font-size:15px;
+  color:#435058;
+  font-weight:bold;
+  background-color:#93E1D8;
+}
+#body{
+  width:85%;
+  height:84%;
+  text-align:center;
+  line-height:280px;
+  font-size:15px;
+  color:#435058;
+  font-weight:bold;
+  background-color:#FFFFFB;
+  float:left;
+}
+#Footer{
+  width:100%;
+  height:11%;
+  text-align:center;
+  line-height:80px;
+  font-size:15px;
+  color:#fffaf3;
+  font-weight:bold;
+  background-color:#435058;
+}
+
+/* Add a black background color to the top navigation bar */
+.Header .search-container{
+  float: right;
+}
+
+/* Style the search box inside the navigation bar */
+.Header input[type=text] {
+  padding: 6px;
+  border: none;
+  margin-top: 8px;
+  font-size: 17px;
+}
+
+.Header .search-container button{
+  padding: 6px 10px;
+  margin-top: 8px;
+  margin-right: 16px;
+  background: #ddd;
+  font-size: 17px;
+  border: none;
+  cursor: pointer;
+}
+
+</style>
+
+<div id="Header">Header 欄位</div>
+<div id="Sidebar">Sidebar</div>
+<div id="Body">Body 欄位</div>
+<div style='clear:both;'></div>
+<div id="Footer">Footer 欄位</div>
+
+/*SearchBar*/
+<div class="Header">
+  <a style="font-size:30px;color:blue;text-decoration:none;" class="active" href="/#">My Jolysted</a>
+  <div class="search-container">
+    <form action="/#">
+      <input type="text" placeholder="Search.." name="search">
+      <button type="submit">Search</button>
+    </form>
+  </div>
+</div>
